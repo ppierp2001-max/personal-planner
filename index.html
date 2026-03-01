@@ -99,6 +99,9 @@ const saveCSteps=d=>{try{localStorage.setItem(LS_CSTEPS,JSON.stringify(d))}catch
 const LS_BOVER='morning-planner-base-overrides';
 const loadBOver=()=>{try{return JSON.parse(localStorage.getItem(LS_BOVER))||{}}catch{return{}}};
 const saveBOver=d=>{try{localStorage.setItem(LS_BOVER,JSON.stringify(d))}catch{}};
+const LS_SOVER='morning-planner-step-overrides';
+const loadSOver=()=>{try{return JSON.parse(localStorage.getItem(LS_SOVER))||{}}catch{return{}}};
+const saveSOver=d=>{try{localStorage.setItem(LS_SOVER,JSON.stringify(d))}catch{}};
 
 const DEF_ARRIVO=8*60+50;
 const r5=m=>Math.floor(m/5)*5;
@@ -133,9 +136,11 @@ const BASE=[
   {id:"SC4",code:"SC4",title:"Palestra → Corsa → Ufficio",icon:"🏋️🏃‍♂️💼",sids:["colazione","cambio_palestra","casa_palestra","workout","corsa_palestra","doccia_completa","cambio_vestiti","palestra_ufficio"],runs:["breve","media"],fixed:true},
 ];
 
-function resolve(sc,rk,trs,csm){
+function resolve(sc,rk,trs,csm,sover){
   const r=rk?RUN[rk]:RUN.breve;
   return sc.sids.map(sid=>{
+    const ov=sover&&sover[sid];
+    if(ov)return{name:`${ov.icon||'📌'} ${ov.name}`,min:ov.min,max:ov.max};
     const s=SM[sid];
     if(s){const t=s.nt?(trs[s.nt]||TR[s.nt].bici):null;return s.fn(r,t);}
     const cs=csm&&csm[sid];
@@ -155,7 +160,7 @@ function TL({steps,mx,arrivo}){
   </div>);
 }
 
-function ScCard({sc,onDel,onEdit,arrivo,csm}){
+function ScCard({sc,onDel,onEdit,arrivo,csm,sover}){
   const hr=sc.runs&&sc.runs.length>0;
   const [rk,setRk]=useState(hr?sc.runs[0]:null);
   const [mx,setMx]=useState(false);
@@ -164,7 +169,7 @@ function ScCard({sc,onDel,onEdit,arrivo,csm}){
   const nCU=sc.sids.some(s=>SM[s]?.nt==='casaUfficio');
   const [gT,setGT]=useState('bici'),[pT,setPT]=useState('piedi'),[cT,setCT]=useState('bici');
   const trs={casaPalestra:TR.casaPalestra[gT],palestraUfficio:TR.palestraUfficio[pT],casaUfficio:TR.casaUfficio[cT]};
-  const steps=resolve(sc,rk,trs,csm);
+  const steps=resolve(sc,rk,trs,csm,sover);
   const b=calc(steps,false,arrivo),w=calc(steps,true,arrivo),hasR=b.total!==w.total;
 
   const [editing,setEditing]=useState(false);
@@ -187,8 +192,8 @@ function ScCard({sc,onDel,onEdit,arrivo,csm}){
     </div>
     {editing?(<div style={{padding:'16px 20px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0',display:'flex',flexDirection:'column',gap:14}}>
       <div><div className="cl">Nome e icona</div><div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}><div style={{display:'flex',gap:3}}>{icons.map(ic=><button key={ic} className={`ib${eIcon===ic?' on':''}`} onClick={()=>setEIcon(ic)}>{ic}</button>)}</div><input className="fld" value={eTitle} onChange={e=>setETitle(e.target.value)} style={{flex:1,minWidth:200}}/></div></div>
-      <div><div className="cl">Aggiungi step</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=><button key={st.id} className="chip" onClick={()=>setESids(p=>[...p,st.id])}>{st.name}</button>)}{Object.values(csm||{}).map(st=><button key={st.id} className="chip" style={{borderColor:'#8b5cf6'}} onClick={()=>setESids(p=>[...p,st.id])}>{st.icon||'📌'} {st.name}</button>)}</div></div>
-      {eSids.length>0&&<div><div className="cl">Step ({eSids.length})</div>{eSids.map((sid,i)=>(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{SM[sid]?.name||(csm&&csm[sid]?(csm[sid].icon||'📌')+' '+csm[sid].name:sid)}</span><button onClick={()=>eMv(i,-1)}>▲</button><button onClick={()=>eMv(i,1)}>▼</button><button onClick={()=>setESids(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>))}</div>}
+      <div><div className="cl">Aggiungi step</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=>{const ov=sover&&sover[st.id];return<button key={st.id} className="chip" onClick={()=>setESids(p=>[...p,st.id])}>{ov?(ov.icon||'📌')+' '+ov.name:st.name}</button>})}{Object.values(csm||{}).map(st=><button key={st.id} className="chip" style={{borderColor:'#8b5cf6'}} onClick={()=>setESids(p=>[...p,st.id])}>{st.icon||'📌'} {st.name}</button>)}</div></div>
+      {eSids.length>0&&<div><div className="cl">Step ({eSids.length})</div>{eSids.map((sid,i)=>{const ov=sover&&sover[sid];const nm=ov?(ov.icon||'📌')+' '+ov.name:SM[sid]?.name||(csm&&csm[sid]?(csm[sid].icon||'📌')+' '+csm[sid].name:sid);return(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{nm}</span><button onClick={()=>eMv(i,-1)}>▲</button><button onClick={()=>eMv(i,1)}>▼</button><button onClick={()=>setESids(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>)})}</div>}
       {eHasRun&&<div><div className="cl">Tipi di corsa</div><div className="pills">{Object.entries(RUN).map(([k,v])=><Pill key={k} on={eRuns.includes(k)} onClick={()=>eTogR(k)}>{v.short}</Pill>)}</div></div>}
       <div style={{display:'flex',gap:8}}><button className="cr-btn" onClick={saveEdit} disabled={!eTitle.trim()||!eSids.length} style={{flex:1}}>💾 Salva</button><button className="cr-btn" onClick={()=>setEditing(false)} style={{flex:1,background:'#64748b'}}>Annulla</button></div>
     </div>):(<>
@@ -209,7 +214,7 @@ function ScCard({sc,onDel,onEdit,arrivo,csm}){
   </div>);
 }
 
-function Builder({onAdd,nn,csteps}){
+function Builder({onAdd,nn,csteps,sover}){
   const [open,setOpen]=useState(false);
   const [title,setTitle]=useState('');
   const [icon,setIcon]=useState('⚡');
@@ -225,8 +230,8 @@ function Builder({onAdd,nn,csteps}){
     <div className="card-hd" style={{background:'linear-gradient(135deg,#4f46e5,#7c3aed)',justifyContent:'space-between'}}><h3>🛠️ Crea Scenario SC{nn}</h3><button className="del-btn" onClick={()=>setOpen(false)}>✕</button></div>
     <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:16}}>
       <div><div className="cl">Nome e icona</div><div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}><div style={{display:'flex',gap:3}}>{icons.map(ic=><button key={ic} className={`ib${icon===ic?' on':''}`} onClick={()=>setIcon(ic)}>{ic}</button>)}</div><input className="fld" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Es: Corsa lunga + colazione fuori" style={{flex:1,minWidth:200}}/></div></div>
-      <div><div className="cl">Aggiungi step (clicca in ordine)</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=><button key={st.id} className="chip" onClick={()=>setSel(p=>[...p,st.id])}>{st.name}</button>)}{(csteps||[]).map(st=><button key={st.id} className="chip" style={{borderColor:'#8b5cf6'}} onClick={()=>setSel(p=>[...p,st.id])}>{st.icon||'📌'} {st.name}</button>)}</div></div>
-      {sel.length>0&&<div><div className="cl">Il tuo scenario ({sel.length} step)</div>{sel.map((sid,i)=>{const nm=SM[sid]?.name||(csteps||[]).find(c=>c.id===sid)?.name||sid;return(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{nm}</span><button onClick={()=>mv(i,-1)}>▲</button><button onClick={()=>mv(i,1)}>▼</button><button onClick={()=>setSel(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>)})}</div>}
+      <div><div className="cl">Aggiungi step (clicca in ordine)</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=>{const ov=sover&&sover[st.id];return<button key={st.id} className="chip" onClick={()=>setSel(p=>[...p,st.id])}>{ov?(ov.icon||'📌')+' '+ov.name:st.name}</button>})}{(csteps||[]).map(st=><button key={st.id} className="chip" style={{borderColor:'#8b5cf6'}} onClick={()=>setSel(p=>[...p,st.id])}>{st.icon||'📌'} {st.name}</button>)}</div></div>
+      {sel.length>0&&<div><div className="cl">Il tuo scenario ({sel.length} step)</div>{sel.map((sid,i)=>{const ov=sover&&sover[sid];const nm=ov?(ov.icon||'📌')+' '+ov.name:SM[sid]?.name||(csteps||[]).find(c=>c.id===sid)?.name||sid;return(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{nm}</span><button onClick={()=>mv(i,-1)}>▲</button><button onClick={()=>mv(i,1)}>▼</button><button onClick={()=>setSel(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>)})}</div>}
       {hasRun&&<div><div className="cl">Tipi di corsa</div><div className="pills">{Object.entries(RUN).map(([k,v])=><Pill key={k} on={ro.includes(k)} onClick={()=>togR(k)}>{v.short}</Pill>)}</div></div>}
       <button className="cr-btn" onClick={go} disabled={!title.trim()||!sel.length}>✅ Crea SC{nn}</button>
     </div>
@@ -236,11 +241,11 @@ function Builder({onAdd,nn,csteps}){
 const DAYS=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 const DEFW=[{sc:"SC4",run:"breve",work:true},{sc:"SC1",run:"breve",work:true},{sc:"SC2",run:"media",work:true},{sc:"SC3",run:null,work:true},{sc:"SC1",run:"breve",work:true},{sc:null,run:"media",work:false},{sc:null,run:"lunga",work:false}];
 
-function Weekly({scenarios,arrivo,csm}){
+function Weekly({scenarios,arrivo,csm,sover}){
   const [week,setWeek]=useState(DEFW);
   const [edit,setEdit]=useState(null);
   const scM=Object.fromEntries(scenarios.map(s=>[s.id,s]));
-  const getW=d=>{if(!d.sc||!d.work)return null;const sc=scM[d.sc];if(!sc)return null;const steps=resolve(sc,d.run,DTRS,csm);return{b:calc(steps,false,arrivo),w:calc(steps,true,arrivo)}};
+  const getW=d=>{if(!d.sc||!d.work)return null;const sc=scM[d.sc];if(!sc)return null;const steps=resolve(sc,d.run,DTRS,csm,sover);return{b:calc(steps,false,arrivo),w:calc(steps,true,arrivo)}};
   const upd=(i,f,v)=>setWeek(w=>{const n=[...w];n[i]={...n[i],[f]:v};if(f==='sc'){const sc=scM[v];n[i].run=sc?.runs?.length?sc.runs[0]:null}return n});
 
   return(<div className="card">
@@ -279,13 +284,13 @@ function Weekly({scenarios,arrivo,csm}){
   </div>);
 }
 
-function Cmp({scenarios,arrivo,csm}){
+function Cmp({scenarios,arrivo,csm,sover}){
   const [sA,setSA]=useState('SC1'),[sB,setSB]=useState('SC4');
   const [rA,setRA]=useState('breve'),[rB,setRB]=useState('breve');
   const [mA,setMA]=useState(false),[mB,setMB]=useState(false);
   const scM=Object.fromEntries(scenarios.map(s=>[s.id,s]));
   const a=scM[sA],b=scM[sB];
-  const stA=a?resolve(a,rA,DTRS,csm):[],stB=b?resolve(b,rB,DTRS,csm):[];
+  const stA=a?resolve(a,rA,DTRS,csm,sover):[],stB=b?resolve(b,rB,DTRS,csm,sover):[];
   const bA=calc(stA,false,arrivo),wA=calc(stA,true,arrivo),bB=calc(stB,false,arrivo),wB=calc(stB,true,arrivo);
   const dA=mA?wA:bA,dB=mB?wB:bB;
   const diff=dA.total-dB.total;
@@ -324,7 +329,7 @@ function Cmp({scenarios,arrivo,csm}){
   </div>);
 }
 
-const STEP_ICONS=['🏋️','🧘','📖','🐕','☕','🍳','🚿','👔','💊','🧹','📱','🎵','✏️','📌'];
+const STEP_ICONS=['🏃','💦','🥐','👟','🚶','💨','🏋️','🧘','📖','🐕','☕','🍳','🚿','👔','💊','🧹','📱','🎵','✏️','📌'];
 const emptyStep=()=>({id:'cs_'+Date.now(),name:'',icon:'📌',min:5,max:10});
 
 function StepForm({step,onSave,onCancel}){
@@ -357,13 +362,22 @@ function StepForm({step,onSave,onCancel}){
   </div>);
 }
 
-function Settings({settings,setSettings,csteps,setCsteps}){
+function Settings({settings,setSettings,csteps,setCsteps,sover,setSover}){
   const upd=(k,v)=>setSettings(p=>({...p,[k]:v}));
   const [adding,setAdding]=useState(false);
   const [editId,setEditId]=useState(null);
   const addStep=s=>{setCsteps(p=>[...p,s]);setAdding(false);};
-  const editStep=s=>{setCsteps(p=>p.map(x=>x.id===s.id?s:x));setEditId(null);};
+  const editCustom=s=>{setCsteps(p=>p.map(x=>x.id===s.id?s:x));setEditId(null);};
   const delStep=id=>{setCsteps(p=>p.filter(x=>x.id!==id));if(editId===id)setEditId(null);};
+  const editBuiltin=(id,s)=>{setSover(p=>({...p,[id]:{name:s.name,icon:s.icon,min:s.min,max:s.max}}));setEditId(null);};
+  const resetBuiltin=id=>{setSover(p=>{const n={...p};delete n[id];return n});};
+  const builtinToStep=st=>{
+    const ov=sover&&sover[st.id];
+    if(ov)return{id:st.id,name:ov.name,icon:ov.icon||'📌',min:ov.min,max:ov.max};
+    const icon=st.name.split(' ')[0],name=st.name.replace(/^[^\s]+\s/,'');
+    const info=st.fn(RUN.breve,st.nt?DTRS[st.nt]:null);
+    return{id:st.id,name,icon,min:info.min,max:info.max};
+  };
   return(<div>
     <div className="card" style={{marginBottom:16}}>
       <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>⚙️ Impostazioni generali</h3>
@@ -382,24 +396,30 @@ function Settings({settings,setSettings,csteps,setCsteps}){
       </div>
     </div>
     <div className="card" style={{marginBottom:16}}>
-      <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>📋 Fasi predefinite</h3>
-      <div style={{display:'flex',flexDirection:'column',gap:4}}>
-        {SD.map(st=>{const info=st.fn(RUN.breve,st.nt?DTRS[st.nt]:null);return<div key={st.id} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 10px',background:'#f0f4ff',borderRadius:8}}>
-          <span style={{fontSize:16}}>{st.name.split(' ')[0]}</span>
-          <span style={{flex:1,fontWeight:500,fontSize:13}}>{st.name.replace(/^[^\s]+\s/,'')}</span>
-          <span style={{color:'#64748b',fontSize:11,fontFamily:'JetBrains Mono,monospace'}}>{info.min}–{info.max}′</span>
-        </div>})}
-      </div>
-    </div>
-    <div className="card" style={{marginBottom:16}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-        <h3 style={{fontSize:16,fontWeight:700}}>🧩 Fasi personalizzate</h3>
-        {!adding&&<button onClick={()=>{setAdding(true);setEditId(null);}}
+        <h3 style={{fontSize:16,fontWeight:700}}>📋 Fasi</h3>
+        {!adding&&!editId&&<button onClick={()=>{setAdding(true);setEditId(null);}}
           style={{padding:'5px 14px',borderRadius:8,border:'none',background:'#8b5cf6',color:'#fff',fontWeight:600,fontSize:13,cursor:'pointer'}}>+ Nuova fase</button>}
       </div>
-      {csteps.length===0&&!adding&&<p style={{color:'#94a3b8',fontSize:13,fontStyle:'italic'}}>Nessuna fase personalizzata. Crea la prima!</p>}
+      {SD.map(st=>{const s=builtinToStep(st);const isOv=!!(sover&&sover[st.id]);
+        return editId===st.id
+          ?<StepForm key={st.id} step={s} onSave={u=>editBuiltin(st.id,u)} onCancel={()=>setEditId(null)}/>
+          :<div key={st.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:isOv?'#fef3c7':'#f0f4ff',borderRadius:8,marginBottom:6}}>
+            <span style={{fontSize:20}}>{s.icon}</span>
+            <div style={{flex:1}}>
+              <span style={{fontWeight:600,fontSize:14}}>{s.name}</span>
+              <span style={{color:'#64748b',fontSize:12,marginLeft:8}}>{s.min}–{s.max} min</span>
+            </div>
+            {isOv&&<button onClick={()=>resetBuiltin(st.id)} title="Ripristina"
+              style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>🔄</button>}
+            <button onClick={()=>{setEditId(st.id);setAdding(false);}} title="Modifica"
+              style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>✏️</button>
+          </div>})}
+      {csteps.length>0&&<div style={{borderTop:'1px solid #e2e8f0',margin:'12px 0',paddingTop:8}}>
+        <span style={{fontSize:11,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:1}}>Personalizzate</span>
+      </div>}
       {csteps.map(cs=>editId===cs.id
-        ?<StepForm key={cs.id} step={cs} onSave={editStep} onCancel={()=>setEditId(null)}/>
+        ?<StepForm key={cs.id} step={cs} onSave={editCustom} onCancel={()=>setEditId(null)}/>
         :<div key={cs.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'#f8fafc',borderRadius:8,marginBottom:6}}>
           <span style={{fontSize:20}}>{cs.icon}</span>
           <div style={{flex:1}}>
@@ -429,6 +449,8 @@ function App(){
   const csm=useMemo(()=>Object.fromEntries(csteps.map(s=>[s.id,s])),[csteps]);
   const [bover,setBover]=useState(loadBOver);
   useEffect(()=>saveBOver(bover),[bover]);
+  const [sover,setSover]=useState(loadSOver);
+  useEffect(()=>saveSOver(sover),[sover]);
   const all=useMemo(()=>[...BASE.map(b=>bover[b.id]?{...b,...bover[b.id]}:b),...custom],[bover,custom]);
   const nn=all.length+1;
   const add=useCallback(sc=>setCustom(p=>[...p,sc]),[]);
@@ -445,10 +467,10 @@ function App(){
     <div className="tabs">
       {[{id:'weekly',l:'📅 Settimana'},{id:'scenarios',l:'🔍 Scenari'},{id:'compare',l:'⚡ Confronto'},{id:'settings',l:'⚙️ Impostazioni'}].map(t=>(<button key={t.id} className={`tab-btn${tab===t.id?' on':''}`} onClick={()=>setTab(t.id)}>{t.l}</button>))}
     </div>
-    {tab==='weekly'&&<Weekly scenarios={all} arrivo={arrivo} csm={csm}/>}
-    {tab==='scenarios'&&<div>{all.map(s=><ScCard key={s.id} sc={s} onDel={del} onEdit={edit} arrivo={arrivo} csm={csm}/>)}<Builder onAdd={add} nn={nn} csteps={csteps}/></div>}
-    {tab==='compare'&&<Cmp scenarios={all} arrivo={arrivo} csm={csm}/>}
-    {tab==='settings'&&<Settings settings={settings} setSettings={setSettings} csteps={csteps} setCsteps={setCsteps}/>}
+    {tab==='weekly'&&<Weekly scenarios={all} arrivo={arrivo} csm={csm} sover={sover}/>}
+    {tab==='scenarios'&&<div>{all.map(s=><ScCard key={s.id} sc={s} onDel={del} onEdit={edit} arrivo={arrivo} csm={csm} sover={sover}/>)}<Builder onAdd={add} nn={nn} csteps={csteps} sover={sover}/></div>}
+    {tab==='compare'&&<Cmp scenarios={all} arrivo={arrivo} csm={csm} sover={sover}/>}
+    {tab==='settings'&&<Settings settings={settings} setSettings={setSettings} csteps={csteps} setCsteps={setCsteps} sover={sover} setSover={setSover}/>}
     <div style={{textAlign:'center',padding:'24px 0 12px',fontSize:11,color:'#94a3b8'}}>Built for Pier 🚀</div>
   </div>);
 }
