@@ -96,6 +96,9 @@ const loadSettings=()=>{try{return JSON.parse(localStorage.getItem(LS_SETTINGS))
 const saveSettings=d=>{try{localStorage.setItem(LS_SETTINGS,JSON.stringify(d))}catch{}};
 const loadCSteps=()=>{try{return JSON.parse(localStorage.getItem(LS_CSTEPS))||[]}catch{return[]}};
 const saveCSteps=d=>{try{localStorage.setItem(LS_CSTEPS,JSON.stringify(d))}catch{}};
+const LS_BOVER='morning-planner-base-overrides';
+const loadBOver=()=>{try{return JSON.parse(localStorage.getItem(LS_BOVER))||{}}catch{return{}}};
+const saveBOver=d=>{try{localStorage.setItem(LS_BOVER,JSON.stringify(d))}catch{}};
 
 const DEF_ARRIVO=8*60+50;
 const r5=m=>Math.floor(m/5)*5;
@@ -179,13 +182,13 @@ function ScCard({sc,onDel,onEdit,arrivo,csm}){
   return(<div className="card">
     <div className="card-hd" style={{background:'linear-gradient(135deg,#4f46e5,#3b82f6)'}}>
       <span className="code">{sc.code}</span><span style={{fontSize:18}}>{sc.icon}</span><h3>{sc.title}</h3>
-      {!sc.fixed&&onEdit&&<button className="del-btn" onClick={startEdit} style={{marginLeft:'auto',marginRight:0}}>✏️</button>}
+      {onEdit&&<button className="del-btn" onClick={startEdit} style={{marginLeft:'auto',marginRight:0}}>✏️</button>}
       {!sc.fixed&&onDel&&<button className="del-btn" onClick={()=>onDel(sc.id)}>✕</button>}
     </div>
     {editing?(<div style={{padding:'16px 20px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0',display:'flex',flexDirection:'column',gap:14}}>
       <div><div className="cl">Nome e icona</div><div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}><div style={{display:'flex',gap:3}}>{icons.map(ic=><button key={ic} className={`ib${eIcon===ic?' on':''}`} onClick={()=>setEIcon(ic)}>{ic}</button>)}</div><input className="fld" value={eTitle} onChange={e=>setETitle(e.target.value)} style={{flex:1,minWidth:200}}/></div></div>
-      <div><div className="cl">Aggiungi step</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=><button key={st.id} className="chip" onClick={()=>setESids(p=>[...p,st.id])}>{st.name}</button>)}</div></div>
-      {eSids.length>0&&<div><div className="cl">Step ({eSids.length})</div>{eSids.map((sid,i)=>(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{SM[sid]?.name||sid}</span><button onClick={()=>eMv(i,-1)}>▲</button><button onClick={()=>eMv(i,1)}>▼</button><button onClick={()=>setESids(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>))}</div>}
+      <div><div className="cl">Aggiungi step</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=><button key={st.id} className="chip" onClick={()=>setESids(p=>[...p,st.id])}>{st.name}</button>)}{Object.values(csm||{}).map(st=><button key={st.id} className="chip" style={{borderColor:'#8b5cf6'}} onClick={()=>setESids(p=>[...p,st.id])}>{st.icon||'📌'} {st.name}</button>)}</div></div>
+      {eSids.length>0&&<div><div className="cl">Step ({eSids.length})</div>{eSids.map((sid,i)=>(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{SM[sid]?.name||(csm&&csm[sid]?(csm[sid].icon||'📌')+' '+csm[sid].name:sid)}</span><button onClick={()=>eMv(i,-1)}>▲</button><button onClick={()=>eMv(i,1)}>▼</button><button onClick={()=>setESids(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>))}</div>}
       {eHasRun&&<div><div className="cl">Tipi di corsa</div><div className="pills">{Object.entries(RUN).map(([k,v])=><Pill key={k} on={eRuns.includes(k)} onClick={()=>eTogR(k)}>{v.short}</Pill>)}</div></div>}
       <div style={{display:'flex',gap:8}}><button className="cr-btn" onClick={saveEdit} disabled={!eTitle.trim()||!eSids.length} style={{flex:1}}>💾 Salva</button><button className="cr-btn" onClick={()=>setEditing(false)} style={{flex:1,background:'#64748b'}}>Annulla</button></div>
     </div>):(<>
@@ -379,6 +382,16 @@ function Settings({settings,setSettings,csteps,setCsteps}){
       </div>
     </div>
     <div className="card" style={{marginBottom:16}}>
+      <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>📋 Fasi predefinite</h3>
+      <div style={{display:'flex',flexDirection:'column',gap:4}}>
+        {SD.map(st=>{const info=st.fn(RUN.breve,st.nt?DTRS[st.nt]:null);return<div key={st.id} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 10px',background:'#f0f4ff',borderRadius:8}}>
+          <span style={{fontSize:16}}>{st.name.split(' ')[0]}</span>
+          <span style={{flex:1,fontWeight:500,fontSize:13}}>{st.name.replace(/^[^\s]+\s/,'')}</span>
+          <span style={{color:'#64748b',fontSize:11,fontFamily:'JetBrains Mono,monospace'}}>{info.min}–{info.max}′</span>
+        </div>})}
+      </div>
+    </div>
+    <div className="card" style={{marginBottom:16}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
         <h3 style={{fontSize:16,fontWeight:700}}>🧩 Fasi personalizzate</h3>
         {!adding&&<button onClick={()=>{setAdding(true);setEditId(null);}}
@@ -414,11 +427,16 @@ function App(){
   useEffect(()=>saveCSteps(csteps),[csteps]);
   const arrivo=settings.arrivoH*60+settings.arrivoM;
   const csm=useMemo(()=>Object.fromEntries(csteps.map(s=>[s.id,s])),[csteps]);
-  const all=[...BASE,...custom];
+  const [bover,setBover]=useState(loadBOver);
+  useEffect(()=>saveBOver(bover),[bover]);
+  const all=useMemo(()=>[...BASE.map(b=>bover[b.id]?{...b,...bover[b.id]}:b),...custom],[bover,custom]);
   const nn=all.length+1;
   const add=useCallback(sc=>setCustom(p=>[...p,sc]),[]);
   const del=useCallback(id=>setCustom(p=>p.filter(s=>s.id!==id)),[]);
-  const edit=useCallback((id,upd)=>setCustom(p=>p.map(s=>s.id===id?{...s,...upd}:s)),[]);
+  const edit=useCallback((id,upd)=>{
+    if(BASE.some(b=>b.id===id))setBover(p=>({...p,[id]:{...(p[id]||{}),...upd}}));
+    else setCustom(p=>p.map(s=>s.id===id?{...s,...upd}:s));
+  },[]);
   return(<div className="container">
     <div style={{textAlign:'center',marginBottom:20}}>
       <h1 style={{fontSize:28,fontWeight:900,marginBottom:4}}>⏰ Pianificazione Mattina</h1>
