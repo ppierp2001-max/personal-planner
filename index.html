@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⏰ Pianificazione Mattina</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏰</text></svg>">
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:linear-gradient(135deg,#f8fafc 0%,#eef2ff 50%,#f0f9ff 100%);min-height:100vh;color:#1e293b}
+.mono{font-family:'JetBrains Mono',monospace}
+.container{max-width:960px;margin:0 auto;padding:16px}
+@media(min-width:768px){.container{padding:24px 32px}}
+.tabs{display:flex;gap:6px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.tab-btn{padding:8px 18px;border-radius:99px;font-size:13px;font-weight:600;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;transition:all .2s;font-family:inherit}
+.tab-btn:hover{border-color:#a5b4fc}
+.tab-btn.on{background:#4f46e5;color:#fff;border-color:#4f46e5;box-shadow:0 2px 8px rgba(79,70,229,.25)}
+.card{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #e8ecf1;overflow:hidden;margin-bottom:20px}
+.card-hd{padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card-hd h3{font-weight:700;font-size:15px;color:#fff;flex:1}
+.code{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.2);color:#fff;letter-spacing:.5px}
+.wake-box{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom:1px solid #fde68a}
+.wake-box .lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#b45309;margin-bottom:2px}
+.wake-box .big{font-size:32px;font-weight:900;color:#78350f;font-family:'JetBrains Mono',monospace}
+.wake-box .meta{text-align:right}
+.wake-box .dur{font-size:16px;font-weight:700;color:#92400e}
+.wake-box .arr{font-size:11px;color:#b45309;margin-top:2px}
+.tl-r{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;margin:2px 0}
+.tl-r:nth-child(odd){background:#fafbfc}
+.tl-r:hover{background:#eef2ff}
+.tb{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.tb-i{background:#e0e7ff;color:#4338ca}.tb-a{background:#fde68a;color:#78350f}.tb-g{background:#bbf7d0;color:#166534}
+.tl-arr{color:#cbd5e1;font-size:10px}
+.tl-nm{font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-d{font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8;flex-shrink:0}
+.tl-wake{background:#fffbeb;border:1px solid #fde68a;margin-bottom:4px}
+.tl-end{background:#f0fdf4;border:1px solid #bbf7d0;margin-top:4px}
+.cg{margin-bottom:4px}
+.cl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#94a3b8;margin-bottom:4px}
+.pills{display:flex;gap:4px;flex-wrap:wrap}
+.pill{padding:5px 12px;border-radius:8px;font-size:12px;font-weight:500;border:none;cursor:pointer;transition:all .15s;background:#f1f5f9;color:#64748b;font-family:inherit}
+.pill:hover{background:#e2e8f0}
+.pill.on{background:#4f46e5;color:#fff}
+.wk-row{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s}
+.wk-row:hover{background:#f8fafc}.wk-row:last-child{border-bottom:none}.wk-row.we{background:#fafafa}
+.wk-day{font-weight:700;font-size:14px;width:80px;flex-shrink:0}
+.wk-info{flex:1;min-width:0}
+.wk-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+.tag-sc{background:#e0e7ff;color:#4338ca}.tag-run{background:#dcfce7;color:#166534}
+.wk-wk{text-align:right;flex-shrink:0;min-width:100px}
+.wk-wk-lbl{font-size:9px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.5px}
+.wk-wk-t{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:800;color:#78350f}
+.wk-wk-d{font-size:11px;color:#94a3b8}
+.edit-pn{padding:14px 20px;background:#f8fafc;border-top:1px solid #e2e8f0}
+.cmp-sel{border-radius:12px;padding:16px;border:1.5px solid}
+.cmp-a{background:#eff6ff;border-color:#bfdbfe}.cmp-b{background:#fdf2f8;border-color:#fbcfe8}
+.cmp-res{text-align:center;padding:14px;border-radius:10px;font-size:14px;font-weight:700;margin:16px 0}
+.cmp-g{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:768px){.cmp-g{grid-template-columns:1fr 1fr}}
+.cmp-cl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px;padding:6px;border-radius:8px}
+.bld-btn{width:100%;padding:16px;border-radius:14px;border:2px dashed #a5b4fc;background:transparent;color:#4f46e5;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s;font-family:inherit}
+.bld-btn:hover{background:#eef2ff;border-color:#6366f1}
+.chip{padding:5px 10px;border-radius:8px;font-size:11px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;cursor:pointer;transition:all .15s;font-family:inherit}
+.chip:hover{background:#eef2ff;border-color:#a5b4fc}
+.bst{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#eef2ff;border-radius:8px;margin-bottom:4px}
+.bst-n{font-family:'JetBrains Mono',monospace;font-size:11px;color:#818cf8;width:20px}
+.bst-nm{flex:1;font-size:13px}
+.bst button{background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px;padding:2px 4px;font-family:inherit}
+.bst button:hover{color:#4f46e5}
+.ib{width:32px;height:32px;border-radius:8px;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:#f8fafc}
+.ib.on{background:#e0e7ff;box-shadow:0 0 0 2px #6366f1}
+.fld{width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;transition:border .2s}
+.fld:focus{border-color:#818cf8}
+.cr-btn{width:100%;padding:10px;border-radius:10px;background:#4f46e5;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;transition:all .2s;font-family:inherit}
+.cr-btn:hover{background:#4338ca}.cr-btn:disabled{opacity:.4;cursor:not-allowed}
+.del-btn{background:none;border:none;color:rgba(255,255,255,.5);font-size:16px;cursor:pointer;margin-left:auto}
+.del-btn:hover{color:#fff}
+@media(max-width:640px){.wake-box .big{font-size:24px}.wk-day{width:55px;font-size:12px}.wk-wk-t{font-size:14px}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useCallback,useEffect,useMemo}=React;
+const LS_KEY='morning-planner-custom-scenarios';
+const LS_SETTINGS='morning-planner-settings';
+const LS_CSTEPS='morning-planner-custom-steps';
+const loadCustom=()=>{try{return JSON.parse(localStorage.getItem(LS_KEY))||[]}catch{return[]}};
+const saveCustom=d=>{try{localStorage.setItem(LS_KEY,JSON.stringify(d))}catch{}};
+const loadSettings=()=>{try{return JSON.parse(localStorage.getItem(LS_SETTINGS))||{arrivoH:8,arrivoM:50}}catch{return{arrivoH:8,arrivoM:50}}};
+const saveSettings=d=>{try{localStorage.setItem(LS_SETTINGS,JSON.stringify(d))}catch{}};
+const loadCSteps=()=>{try{return JSON.parse(localStorage.getItem(LS_CSTEPS))||[]}catch{return[]}};
+const saveCSteps=d=>{try{localStorage.setItem(LS_CSTEPS,JSON.stringify(d))}catch{}};
+
+const DEF_ARRIVO=8*60+50;
+const r5=m=>Math.floor(m/5)*5;
+const fmt=m=>{let v=r5(m)%(24*60);if(v<0)v+=24*60;return`${Math.floor(v/60)}:${(v%60).toString().padStart(2,'0')}`};
+const hm=m=>{const h=Math.floor(m/60),mm=m%60;return h===0?`${mm}min`:mm===0?`${h}h`:`${h}h${mm.toString().padStart(2,'0')}`};
+const calc=(steps,mx,arrivo)=>{const a=arrivo||DEF_ARRIVO;const tot=steps.reduce((s,st)=>s+(mx?st.max:st.min),0),w=a-tot;let c=w;const rows=steps.map(st=>{const d=mx?st.max:st.min,start=c;c+=d;return{...st,start,end:c,dur:d}});return{rows,wake:w,total:tot}};
+
+const RUN={breve:{label:"Corsa breve",short:"40min",min:40,max:40},media:{label:"Corsa media",short:"1h10",min:70,max:70},lunga:{label:"Corsa lunga",short:"1h30-2h",min:90,max:120}};
+const TR={casaPalestra:{bici:{l:"bici",min:12,max:12},piedi:{l:"piedi",min:20,max:20}},palestraUfficio:{piedi:{l:"piedi",min:10,max:10},bici:{l:"bici",min:10,max:10}},casaUfficio:{bici:{l:"bici",min:15,max:15},piedi:{l:"piedi",min:25,max:25}}};
+const DTRS={casaPalestra:TR.casaPalestra.bici,palestraUfficio:TR.palestraUfficio.piedi,casaUfficio:TR.casaUfficio.bici};
+
+const SD=[
+  {id:"corsa_casa",name:"🏃 Corsa (da casa)",nr:true,fn:r=>({name:`🏃 Corsa da casa (${r.short})`,min:r.min,max:r.max})},
+  {id:"corsa_palestra",name:"🏃 Corsa (dalla palestra)",nr:true,fn:r=>({name:`🏃 Corsa dalla palestra (${r.short})`,min:r.min,max:r.max})},
+  {id:"doccia_completa",name:"🚿 Doccia completa",fn:()=>({name:"🚿 Doccia completa",min:5,max:10})},
+  {id:"lavata_veloce",name:"💦 Lavata veloce + cambio",fn:()=>({name:"💦 Lavata veloce + cambio",min:10,max:10})},
+  {id:"colazione",name:"🥐 Colazione",fn:()=>({name:"🥐 Colazione",min:30,max:30})},
+  {id:"cambio_palestra",name:"👟 Cambio per palestra",fn:()=>({name:"👟 Cambio per palestra",min:5,max:5})},
+  {id:"prepararsi",name:"👔 Prepararsi a casa",fn:()=>({name:"👔 Prepararsi a casa",min:10,max:15})},
+  {id:"workout",name:"🏋️ Workout",fn:()=>({name:"🏋️ Workout",min:75,max:90})},
+  {id:"cambio_vestiti",name:"👔 Cambio vestiti",fn:()=>({name:"👔 Cambio vestiti",min:5,max:5})},
+  {id:"casa_palestra",name:"🚶 Casa → Palestra",nt:"casaPalestra",fn:(_,t)=>({name:`Casa → Palestra (${t.l})`,min:t.min,max:t.max})},
+  {id:"palestra_ufficio",name:"🚶 Palestra → Ufficio",nt:"palestraUfficio",fn:(_,t)=>({name:`Palestra → Ufficio (${t.l})`,min:t.min,max:t.max})},
+  {id:"casa_ufficio",name:"🚲 Casa → Ufficio",nt:"casaUfficio",fn:(_,t)=>({name:`Casa → Ufficio (${t.l})`,min:t.min,max:t.max})},
+];
+const SM=Object.fromEntries(SD.map(s=>[s.id,s]));
+
+const BASE=[
+  {id:"SC1",code:"SC1",title:"Corsa → Palestra → Ufficio",icon:"🏃‍♂️🏋️💼",sids:["corsa_casa","doccia_completa","colazione","cambio_palestra","casa_palestra","workout","lavata_veloce","palestra_ufficio"],runs:["breve","media"],fixed:true},
+  {id:"SC2",code:"SC2",title:"Solo Corsa → Ufficio",icon:"🏃‍♂️💼",sids:["corsa_casa","doccia_completa","colazione","prepararsi","casa_ufficio"],runs:["breve","media","lunga"],fixed:true},
+  {id:"SC3",code:"SC3",title:"Solo Palestra → Ufficio",icon:"🏋️💼",sids:["colazione","cambio_palestra","casa_palestra","workout","lavata_veloce","palestra_ufficio"],runs:[],fixed:true},
+  {id:"SC4",code:"SC4",title:"Palestra → Corsa → Ufficio",icon:"🏋️🏃‍♂️💼",sids:["colazione","cambio_palestra","casa_palestra","workout","corsa_palestra","doccia_completa","cambio_vestiti","palestra_ufficio"],runs:["breve","media"],fixed:true},
+];
+
+function resolve(sc,rk,trs,csm){
+  const r=rk?RUN[rk]:RUN.breve;
+  return sc.sids.map(sid=>{
+    const s=SM[sid];
+    if(s){const t=s.nt?(trs[s.nt]||TR[s.nt].bici):null;return s.fn(r,t);}
+    const cs=csm&&csm[sid];
+    if(cs)return{name:`${cs.icon||'📌'} ${cs.name}`,min:cs.min,max:cs.max};
+    return{name:sid,min:5,max:5};
+  });
+}
+
+const Pill=({on,onClick,children})=><button className={`pill${on?' on':''}`} onClick={onClick}>{children}</button>;
+
+function TL({steps,mx,arrivo}){
+  const d=calc(steps,mx,arrivo);
+  return(<div>
+    <div className="tl-r tl-wake"><span className="tb tb-a">{fmt(d.wake)}</span><span className="tl-nm" style={{fontWeight:700,color:'#92400e'}}>⏰ SVEGLIA</span></div>
+    {d.rows.map((s,i)=>(<div className="tl-r" key={i}><span className="tb tb-i">{fmt(s.start)}</span><span className="tl-arr">→</span><span className="tb tb-i">{fmt(s.end)}</span><span className="tl-nm">{s.name}</span><span className="tl-d">{s.dur}′</span></div>))}
+    <div className="tl-r tl-end"><span className="tb tb-g">{fmt(arrivo||DEF_ARRIVO)}</span><span className="tl-nm" style={{fontWeight:700,color:'#166534'}}>✅ ARRIVO UFFICIO</span></div>
+  </div>);
+}
+
+function ScCard({sc,onDel,onEdit,arrivo,csm}){
+  const hr=sc.runs&&sc.runs.length>0;
+  const [rk,setRk]=useState(hr?sc.runs[0]:null);
+  const [mx,setMx]=useState(false);
+  const nG=sc.sids.some(s=>SM[s]?.nt==='casaPalestra');
+  const nPU=sc.sids.some(s=>SM[s]?.nt==='palestraUfficio');
+  const nCU=sc.sids.some(s=>SM[s]?.nt==='casaUfficio');
+  const [gT,setGT]=useState('bici'),[pT,setPT]=useState('piedi'),[cT,setCT]=useState('bici');
+  const trs={casaPalestra:TR.casaPalestra[gT],palestraUfficio:TR.palestraUfficio[pT],casaUfficio:TR.casaUfficio[cT]};
+  const steps=resolve(sc,rk,trs,csm);
+  const b=calc(steps,false,arrivo),w=calc(steps,true,arrivo),hasR=b.total!==w.total;
+
+  const [editing,setEditing]=useState(false);
+  const [eTitle,setETitle]=useState(sc.title);
+  const [eIcon,setEIcon]=useState(sc.icon);
+  const [eSids,setESids]=useState(sc.sids);
+  const [eRuns,setERuns]=useState(sc.runs||[]);
+  const icons=['⚡','🔥','💪','🌅','🚀','🎯','⭐','🏆','🌙','☀️'];
+  const eHasRun=eSids.some(s=>SM[s]?.nr);
+  const eMv=(i,d)=>setESids(p=>{const a=[...p],n=i+d;if(n<0||n>=a.length)return a;[a[i],a[n]]=[a[n],a[i]];return a});
+  const eTogR=r=>setERuns(p=>p.includes(r)?p.filter(x=>x!==r):[...p,r]);
+  const startEdit=()=>{setETitle(sc.title);setEIcon(sc.icon);setESids([...sc.sids]);setERuns([...(sc.runs||[])]);setEditing(true)};
+  const saveEdit=()=>{if(!eTitle.trim()||!eSids.length)return;const runs=eHasRun?(eRuns.length?eRuns:['breve']):[];onEdit(sc.id,{title:eTitle.trim(),icon:eIcon,sids:eSids,runs});if(runs.length&&!runs.includes(rk))setRk(runs[0]);if(!runs.length)setRk(null);setEditing(false)};
+
+  return(<div className="card">
+    <div className="card-hd" style={{background:'linear-gradient(135deg,#4f46e5,#3b82f6)'}}>
+      <span className="code">{sc.code}</span><span style={{fontSize:18}}>{sc.icon}</span><h3>{sc.title}</h3>
+      {!sc.fixed&&onEdit&&<button className="del-btn" onClick={startEdit} style={{marginLeft:'auto',marginRight:0}}>✏️</button>}
+      {!sc.fixed&&onDel&&<button className="del-btn" onClick={()=>onDel(sc.id)}>✕</button>}
+    </div>
+    {editing?(<div style={{padding:'16px 20px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0',display:'flex',flexDirection:'column',gap:14}}>
+      <div><div className="cl">Nome e icona</div><div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}><div style={{display:'flex',gap:3}}>{icons.map(ic=><button key={ic} className={`ib${eIcon===ic?' on':''}`} onClick={()=>setEIcon(ic)}>{ic}</button>)}</div><input className="fld" value={eTitle} onChange={e=>setETitle(e.target.value)} style={{flex:1,minWidth:200}}/></div></div>
+      <div><div className="cl">Aggiungi step</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=><button key={st.id} className="chip" onClick={()=>setESids(p=>[...p,st.id])}>{st.name}</button>)}</div></div>
+      {eSids.length>0&&<div><div className="cl">Step ({eSids.length})</div>{eSids.map((sid,i)=>(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{SM[sid]?.name||sid}</span><button onClick={()=>eMv(i,-1)}>▲</button><button onClick={()=>eMv(i,1)}>▼</button><button onClick={()=>setESids(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>))}</div>}
+      {eHasRun&&<div><div className="cl">Tipi di corsa</div><div className="pills">{Object.entries(RUN).map(([k,v])=><Pill key={k} on={eRuns.includes(k)} onClick={()=>eTogR(k)}>{v.short}</Pill>)}</div></div>}
+      <div style={{display:'flex',gap:8}}><button className="cr-btn" onClick={saveEdit} disabled={!eTitle.trim()||!eSids.length} style={{flex:1}}>💾 Salva</button><button className="cr-btn" onClick={()=>setEditing(false)} style={{flex:1,background:'#64748b'}}>Annulla</button></div>
+    </div>):(<>
+    <div className="wake-box">
+      <div><div className="lbl">⏰ Sveglia</div><div className="big">{hasR?`${fmt(w.wake)} – ${fmt(b.wake)}`:fmt(b.wake)}</div></div>
+      <div className="meta"><div className="dur">{hasR?`${hm(b.total)} – ${hm(w.total)}`:hm(b.total)}</div><div className="arr">Arrivo: {fmt(arrivo||DEF_ARRIVO)}</div></div>
+    </div>
+    <div style={{padding:'16px 20px'}}>
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:14}}>
+        {hr&&<div className="cg"><div className="cl">Corsa</div><div className="pills">{sc.runs.map(r=><Pill key={r} on={rk===r} onClick={()=>setRk(r)}>{RUN[r].short}</Pill>)}</div></div>}
+        {nG&&<div className="cg"><div className="cl">Casa→Pal</div><div className="pills">{['bici','piedi'].map(t=><Pill key={t} on={gT===t} onClick={()=>setGT(t)}>{t==='bici'?'🚲':'🚶'} {t}</Pill>)}</div></div>}
+        {nPU&&<div className="cg"><div className="cl">Pal→Uff</div><div className="pills">{['piedi','bici'].map(t=><Pill key={t} on={pT===t} onClick={()=>setPT(t)}>{t==='bici'?'🚲':'🚶'} {t}</Pill>)}</div></div>}
+        {nCU&&<div className="cg"><div className="cl">Casa→Uff</div><div className="pills">{['bici','piedi'].map(t=><Pill key={t} on={cT===t} onClick={()=>setCT(t)}>{t==='bici'?'🚲':'🚶'} {t}</Pill>)}</div></div>}
+        {hasR&&<div className="cg"><div className="cl">Stima</div><div className="pills"><Pill on={!mx} onClick={()=>setMx(false)}>⚡ Veloce</Pill><Pill on={mx} onClick={()=>setMx(true)}>😴 Calma</Pill></div></div>}
+      </div>
+      <TL steps={steps} mx={mx} arrivo={arrivo}/>
+    </div></>)}
+  </div>);
+}
+
+function Builder({onAdd,nn,csteps}){
+  const [open,setOpen]=useState(false);
+  const [title,setTitle]=useState('');
+  const [icon,setIcon]=useState('⚡');
+  const [sel,setSel]=useState([]);
+  const [ro,setRo]=useState([]);
+  const icons=['⚡','🔥','💪','🌅','🚀','🎯','⭐','🏆','🌙','☀️'];
+  const hasRun=sel.some(s=>SM[s]?.nr);
+  const togR=r=>setRo(p=>p.includes(r)?p.filter(x=>x!==r):[...p,r]);
+  const mv=(i,d)=>setSel(p=>{const a=[...p],n=i+d;if(n<0||n>=a.length)return a;[a[i],a[n]]=[a[n],a[i]];return a});
+  const go=()=>{if(!title.trim()||!sel.length)return;onAdd({id:`c${Date.now()}`,code:`SC${nn}`,title:title.trim(),icon,sids:[...sel],runs:hasRun?(ro.length?ro:['breve']):[],fixed:false});setTitle('');setSel([]);setRo([]);setOpen(false)};
+  if(!open)return<button className="bld-btn" onClick={()=>setOpen(true)}>+ Crea nuovo scenario (SC{nn})</button>;
+  return(<div className="card">
+    <div className="card-hd" style={{background:'linear-gradient(135deg,#4f46e5,#7c3aed)',justifyContent:'space-between'}}><h3>🛠️ Crea Scenario SC{nn}</h3><button className="del-btn" onClick={()=>setOpen(false)}>✕</button></div>
+    <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:16}}>
+      <div><div className="cl">Nome e icona</div><div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}><div style={{display:'flex',gap:3}}>{icons.map(ic=><button key={ic} className={`ib${icon===ic?' on':''}`} onClick={()=>setIcon(ic)}>{ic}</button>)}</div><input className="fld" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Es: Corsa lunga + colazione fuori" style={{flex:1,minWidth:200}}/></div></div>
+      <div><div className="cl">Aggiungi step (clicca in ordine)</div><div style={{display:'flex',flexWrap:'wrap',gap:4}}>{SD.map(st=><button key={st.id} className="chip" onClick={()=>setSel(p=>[...p,st.id])}>{st.name}</button>)}{(csteps||[]).map(st=><button key={st.id} className="chip" style={{borderColor:'#8b5cf6'}} onClick={()=>setSel(p=>[...p,st.id])}>{st.icon||'📌'} {st.name}</button>)}</div></div>
+      {sel.length>0&&<div><div className="cl">Il tuo scenario ({sel.length} step)</div>{sel.map((sid,i)=>{const nm=SM[sid]?.name||(csteps||[]).find(c=>c.id===sid)?.name||sid;return(<div className="bst" key={i}><span className="bst-n">{i+1}.</span><span className="bst-nm">{nm}</span><button onClick={()=>mv(i,-1)}>▲</button><button onClick={()=>mv(i,1)}>▼</button><button onClick={()=>setSel(p=>p.filter((_,j)=>j!==i))} style={{color:'#ef4444'}}>✕</button></div>)})}</div>}
+      {hasRun&&<div><div className="cl">Tipi di corsa</div><div className="pills">{Object.entries(RUN).map(([k,v])=><Pill key={k} on={ro.includes(k)} onClick={()=>togR(k)}>{v.short}</Pill>)}</div></div>}
+      <button className="cr-btn" onClick={go} disabled={!title.trim()||!sel.length}>✅ Crea SC{nn}</button>
+    </div>
+  </div>);
+}
+
+const DAYS=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+const DEFW=[{sc:"SC4",run:"breve",work:true},{sc:"SC1",run:"breve",work:true},{sc:"SC2",run:"media",work:true},{sc:"SC3",run:null,work:true},{sc:"SC1",run:"breve",work:true},{sc:null,run:"media",work:false},{sc:null,run:"lunga",work:false}];
+
+function Weekly({scenarios,arrivo,csm}){
+  const [week,setWeek]=useState(DEFW);
+  const [edit,setEdit]=useState(null);
+  const scM=Object.fromEntries(scenarios.map(s=>[s.id,s]));
+  const getW=d=>{if(!d.sc||!d.work)return null;const sc=scM[d.sc];if(!sc)return null;const steps=resolve(sc,d.run,DTRS,csm);return{b:calc(steps,false,arrivo),w:calc(steps,true,arrivo)}};
+  const upd=(i,f,v)=>setWeek(w=>{const n=[...w];n[i]={...n[i],[f]:v};if(f==='sc'){const sc=scM[v];n[i].run=sc?.runs?.length?sc.runs[0]:null}return n});
+
+  return(<div className="card">
+    <div className="card-hd" style={{background:'linear-gradient(135deg,#059669,#0d9488)'}}><h3 style={{fontSize:16}}>📅 La Tua Settimana</h3></div>
+    <div style={{padding:'6px 20px 2px',borderBottom:'1px solid #e2e8f0'}}><span style={{fontSize:10,fontWeight:600,color:'#94a3b8',letterSpacing:.5}}>🚲 bici→pal · 🚶 pal→uff · 🚲 casa→uff — clicca un giorno per modificarlo</span></div>
+    {DAYS.map((day,i)=>{
+      const d=week[i],range=getW(d),sc=d.sc?scM[d.sc]:null,isE=edit===i,isWE=i>=5;
+      return(<div key={i}>
+        <div className={`wk-row${isWE&&!d.sc?' we':''}`} onClick={()=>setEdit(isE?null:i)}>
+          <span className="wk-day" style={{color:isWE&&!d.sc?'#94a3b8':'#1e293b'}}>{day}</span>
+          <div className="wk-info"><div className="wk-tags">
+            {sc&&<span className="tag tag-sc">{sc.code} {sc.icon}</span>}
+            {d.run&&<span className="tag tag-run">{RUN[d.run]?.short}</span>}
+            {!sc&&<span style={{fontSize:11,color:'#94a3b8'}}>{d.work?'Clicca per configurare':'Giorno libero'}</span>}
+          </div></div>
+          <div className="wk-wk">
+            {range?(<div>
+              <div style={{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end'}}>
+                <span className="wk-wk-lbl">sveglia</span>
+                <span className="wk-wk-t">{range.b.wake===range.w.wake?fmt(range.b.wake):`${fmt(range.w.wake)}–${fmt(range.b.wake)}`}</span>
+              </div>
+              <div className="wk-wk-d" style={{textAlign:'right'}}>{range.b.total===range.w.total?hm(range.b.total):`${hm(range.b.total)}–${hm(range.w.total)}`}</div>
+            </div>):(<span style={{fontSize:12,color:'#cbd5e1',fontStyle:'italic'}}>{d.work?'—':'Libero'}</span>)}
+          </div>
+          <span style={{color:'#cbd5e1',fontSize:10,marginLeft:8,transition:'transform .2s',transform:isE?'rotate(180deg)':''}}>▼</span>
+        </div>
+        {isE&&<div className="edit-pn">
+          <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+            <div className="cg"><div className="cl">Lavoro?</div><div className="pills"><Pill on={d.work} onClick={()=>upd(i,'work',true)}>Sì</Pill><Pill on={!d.work} onClick={()=>upd(i,'work',false)}>No</Pill></div></div>
+            <div className="cg" style={{flex:1}}><div className="cl">Scenario</div><div className="pills"><Pill on={!d.sc} onClick={()=>upd(i,'sc',null)}>Nessuno</Pill>{scenarios.map(s=><Pill key={s.id} on={d.sc===s.id} onClick={()=>upd(i,'sc',s.id)}>{s.code} {s.icon}</Pill>)}</div></div>
+          </div>
+          {sc?.runs?.length>0&&<div className="cg" style={{marginTop:8}}><div className="cl">Corsa</div><div className="pills">{sc.runs.map(r=><Pill key={r} on={d.run===r} onClick={()=>upd(i,'run',r)}>{RUN[r].short}</Pill>)}</div></div>}
+        </div>}
+      </div>);
+    })}
+  </div>);
+}
+
+function Cmp({scenarios,arrivo,csm}){
+  const [sA,setSA]=useState('SC1'),[sB,setSB]=useState('SC4');
+  const [rA,setRA]=useState('breve'),[rB,setRB]=useState('breve');
+  const [mA,setMA]=useState(false),[mB,setMB]=useState(false);
+  const scM=Object.fromEntries(scenarios.map(s=>[s.id,s]));
+  const a=scM[sA],b=scM[sB];
+  const stA=a?resolve(a,rA,DTRS,csm):[],stB=b?resolve(b,rB,DTRS,csm):[];
+  const bA=calc(stA,false,arrivo),wA=calc(stA,true,arrivo),bB=calc(stB,false,arrivo),wB=calc(stB,true,arrivo);
+  const dA=mA?wA:bA,dB=mB?wB:bB;
+  const diff=dA.total-dB.total;
+
+  const Sel=({label,color,cls,sc,setSc,rk,setRk,best,worst,mx,setMx,scObj})=>{
+    const hr=best.total!==worst.total;
+    return(<div className={`cmp-sel ${cls}`}>
+      <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:color==='blue'?'#2563eb':'#db2777',marginBottom:8}}>{label}</div>
+      <div className="pills" style={{marginBottom:8}}>{scenarios.map(s=><Pill key={s.id} on={sc===s.id} onClick={()=>{setSc(s.id);if(s.runs?.length)setRk(s.runs[0])}}>{s.code} {s.icon}</Pill>)}</div>
+      {scObj?.runs?.length>0&&<div className="pills" style={{marginBottom:8}}>{scObj.runs.map(r=><Pill key={r} on={rk===r} onClick={()=>setRk(r)}>{RUN[r].short}</Pill>)}</div>}
+      {hr&&<div className="pills" style={{marginBottom:8}}><Pill on={!mx} onClick={()=>setMx(false)}>⚡ Veloce</Pill><Pill on={mx} onClick={()=>setMx(true)}>😴 Calma</Pill></div>}
+      <div style={{textAlign:'center',padding:'12px 0'}}>
+        <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'#64748b',marginBottom:4}}>⏰ Sveglia</div>
+        <div className="mono" style={{fontSize:28,fontWeight:900,color:color==='blue'?'#1e40af':'#9d174d'}}>{hr?`${fmt(worst.wake)}–${fmt(best.wake)}`:fmt(best.wake)}</div>
+        <div style={{fontSize:13,color:'#64748b',marginTop:2}}>{hr?`${hm(best.total)}–${hm(worst.total)}`:hm(best.total)}</div>
+      </div>
+    </div>);
+  };
+
+  return(<div className="card">
+    <div className="card-hd" style={{background:'linear-gradient(135deg,#7c3aed,#db2777)'}}><h3 style={{fontSize:16}}>⚡ Confronto Scenari</h3></div>
+    <div style={{padding:20}}>
+      <div className="cmp-g">
+        <Sel label="Scenario A" color="blue" cls="cmp-a" sc={sA} setSc={setSA} rk={rA} setRk={setRA} best={bA} worst={wA} mx={mA} setMx={setMA} scObj={a}/>
+        <Sel label="Scenario B" color="pink" cls="cmp-b" sc={sB} setSc={setSB} rk={rB} setRk={setRB} best={bB} worst={wB} mx={mB} setMx={setMB} scObj={b}/>
+      </div>
+      <div className="cmp-res" style={{background:diff>0?'#eff6ff':diff<0?'#fdf2f8':'#f8fafc',border:`1.5px solid ${diff>0?'#bfdbfe':diff<0?'#fbcfe8':'#e2e8f0'}`,color:diff>0?'#1e40af':diff<0?'#9d174d':'#64748b'}}>
+        {diff===0?'⚖️ Stesso tempo':diff>0?`✅ ${b?.code||'B'} è ${diff}min più veloce`:`✅ ${a?.code||'A'} è ${Math.abs(diff)}min più veloce`}
+        <div style={{fontSize:11,fontWeight:500,marginTop:4,color:'#94a3b8'}}>Differenza caso opposto: {Math.abs(wA.total-wB.total)}min</div>
+      </div>
+      <div className="cmp-g" style={{marginTop:16}}>
+        <div><div className="cmp-cl" style={{background:'#eff6ff',color:'#2563eb'}}>{a?.code} {a?.icon} {a?.title}</div><TL steps={stA} mx={mA} arrivo={arrivo}/></div>
+        <div><div className="cmp-cl" style={{background:'#fdf2f8',color:'#db2777'}}>{b?.code} {b?.icon} {b?.title}</div><TL steps={stB} mx={mB} arrivo={arrivo}/></div>
+      </div>
+    </div>
+  </div>);
+}
+
+const STEP_ICONS=['🏋️','🧘','📖','🐕','☕','🍳','🚿','👔','💊','🧹','📱','🎵','✏️','📌'];
+const emptyStep=()=>({id:'cs_'+Date.now(),name:'',icon:'📌',min:5,max:10});
+
+function StepForm({step,onSave,onCancel}){
+  const [s,setS]=useState({...step});
+  const up=(k,v)=>setS(p=>({...p,[k]:v}));
+  const valid=s.name.trim()&&s.min>0&&s.max>=s.min;
+  const inputSt={padding:'6px 10px',borderRadius:8,border:'1px solid #cbd5e1',fontSize:14,width:'100%'};
+  const numSt={...inputSt,width:70,textAlign:'center'};
+  return(<div style={{background:'#f8fafc',borderRadius:10,padding:12,marginBottom:8}}>
+    <div style={{display:'flex',gap:8,marginBottom:8}}>
+      <div style={{flex:1}}><label style={{fontSize:12,color:'#64748b',display:'block',marginBottom:4}}>Nome</label>
+        <input value={s.name} onChange={e=>up('name',e.target.value)} placeholder="es. Allenamento" style={inputSt}/></div>
+    </div>
+    <div style={{marginBottom:8}}><label style={{fontSize:12,color:'#64748b',display:'block',marginBottom:4}}>Icona</label>
+      <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>{STEP_ICONS.map(ic=>(
+        <button key={ic} onClick={()=>up('icon',ic)} style={{fontSize:18,padding:'4px 6px',borderRadius:6,border:s.icon===ic?'2px solid #8b5cf6':'2px solid transparent',background:s.icon===ic?'#ede9fe':'transparent',cursor:'pointer'}}>{ic}</button>
+      ))}</div>
+    </div>
+    <div style={{display:'flex',gap:12,marginBottom:10}}>
+      <div><label style={{fontSize:12,color:'#64748b',display:'block',marginBottom:4}}>Min (min)</label>
+        <input type="number" value={s.min} min={1} max={120} onChange={e=>up('min',Math.max(1,+e.target.value))} style={numSt}/></div>
+      <div><label style={{fontSize:12,color:'#64748b',display:'block',marginBottom:4}}>Max (min)</label>
+        <input type="number" value={s.max} min={s.min||1} max={120} onChange={e=>up('max',Math.max(s.min||1,+e.target.value))} style={numSt}/></div>
+    </div>
+    <div style={{display:'flex',gap:8}}>
+      <button onClick={()=>{if(valid)onSave({...s,name:s.name.trim()});}} disabled={!valid}
+        style={{padding:'6px 16px',borderRadius:8,border:'none',background:valid?'#8b5cf6':'#cbd5e1',color:'#fff',fontWeight:600,fontSize:13,cursor:valid?'pointer':'default'}}>💾 Salva</button>
+      <button onClick={onCancel} style={{padding:'6px 16px',borderRadius:8,border:'1px solid #cbd5e1',background:'#fff',fontSize:13,cursor:'pointer'}}>Annulla</button>
+    </div>
+  </div>);
+}
+
+function Settings({settings,setSettings,csteps,setCsteps}){
+  const upd=(k,v)=>setSettings(p=>({...p,[k]:v}));
+  const [adding,setAdding]=useState(false);
+  const [editId,setEditId]=useState(null);
+  const addStep=s=>{setCsteps(p=>[...p,s]);setAdding(false);};
+  const editStep=s=>{setCsteps(p=>p.map(x=>x.id===s.id?s:x));setEditId(null);};
+  const delStep=id=>{setCsteps(p=>p.filter(x=>x.id!==id));if(editId===id)setEditId(null);};
+  return(<div>
+    <div className="card" style={{marginBottom:16}}>
+      <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>⚙️ Impostazioni generali</h3>
+      <div style={{marginBottom:8}}>
+        <label style={{fontWeight:600,fontSize:14,display:'block',marginBottom:8}}>🏢 Orario arrivo ufficio</label>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <select value={settings.arrivoH} onChange={e=>upd('arrivoH',+e.target.value)} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #cbd5e1',fontSize:14}}>
+            {Array.from({length:5},(_,i)=>i+6).map(h=><option key={h} value={h}>{String(h).padStart(2,'0')}</option>)}
+          </select>
+          <span style={{fontWeight:700,fontSize:18}}>:</span>
+          <select value={settings.arrivoM} onChange={e=>upd('arrivoM',+e.target.value)} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #cbd5e1',fontSize:14}}>
+            {Array.from({length:12},(_,i)=>i*5).map(m=><option key={m} value={m}>{String(m).padStart(2,'0')}</option>)}
+          </select>
+          <span style={{color:'#64748b',fontSize:13,marginLeft:8}}>({fmt(settings.arrivoH*60+settings.arrivoM)})</span>
+        </div>
+      </div>
+    </div>
+    <div className="card" style={{marginBottom:16}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+        <h3 style={{fontSize:16,fontWeight:700}}>🧩 Fasi personalizzate</h3>
+        {!adding&&<button onClick={()=>{setAdding(true);setEditId(null);}}
+          style={{padding:'5px 14px',borderRadius:8,border:'none',background:'#8b5cf6',color:'#fff',fontWeight:600,fontSize:13,cursor:'pointer'}}>+ Nuova fase</button>}
+      </div>
+      {csteps.length===0&&!adding&&<p style={{color:'#94a3b8',fontSize:13,fontStyle:'italic'}}>Nessuna fase personalizzata. Crea la prima!</p>}
+      {csteps.map(cs=>editId===cs.id
+        ?<StepForm key={cs.id} step={cs} onSave={editStep} onCancel={()=>setEditId(null)}/>
+        :<div key={cs.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'#f8fafc',borderRadius:8,marginBottom:6}}>
+          <span style={{fontSize:20}}>{cs.icon}</span>
+          <div style={{flex:1}}>
+            <span style={{fontWeight:600,fontSize:14}}>{cs.name}</span>
+            <span style={{color:'#64748b',fontSize:12,marginLeft:8}}>{cs.min}–{cs.max} min</span>
+          </div>
+          <button onClick={()=>{setEditId(cs.id);setAdding(false);}} title="Modifica"
+            style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>✏️</button>
+          <button onClick={()=>delStep(cs.id)} title="Elimina"
+            style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>🗑️</button>
+        </div>
+      )}
+      {adding&&<StepForm step={emptyStep()} onSave={addStep} onCancel={()=>setAdding(false)}/>}
+    </div>
+  </div>);
+}
+
+function App(){
+  const [tab,setTab]=useState('weekly');
+  const [custom,setCustom]=useState(loadCustom);
+  const [settings,setSettings]=useState(loadSettings);
+  useEffect(()=>saveCustom(custom),[custom]);
+  const [csteps,setCsteps]=useState(loadCSteps);
+  useEffect(()=>saveSettings(settings),[settings]);
+  useEffect(()=>saveCSteps(csteps),[csteps]);
+  const arrivo=settings.arrivoH*60+settings.arrivoM;
+  const csm=useMemo(()=>Object.fromEntries(csteps.map(s=>[s.id,s])),[csteps]);
+  const all=[...BASE,...custom];
+  const nn=all.length+1;
+  const add=useCallback(sc=>setCustom(p=>[...p,sc]),[]);
+  const del=useCallback(id=>setCustom(p=>p.filter(s=>s.id!==id)),[]);
+  const edit=useCallback((id,upd)=>setCustom(p=>p.map(s=>s.id===id?{...s,...upd}:s)),[]);
+  return(<div className="container">
+    <div style={{textAlign:'center',marginBottom:20}}>
+      <h1 style={{fontSize:28,fontWeight:900,marginBottom:4}}>⏰ Pianificazione Mattina</h1>
+      <p style={{color:'#64748b',fontSize:13}}>Arrivo ufficio: <b>{fmt(arrivo)}</b> — orari arrotondati ai 5min</p>
+    </div>
+    <div className="tabs">
+      {[{id:'weekly',l:'📅 Settimana'},{id:'scenarios',l:'🔍 Scenari'},{id:'compare',l:'⚡ Confronto'},{id:'settings',l:'⚙️ Impostazioni'}].map(t=>(<button key={t.id} className={`tab-btn${tab===t.id?' on':''}`} onClick={()=>setTab(t.id)}>{t.l}</button>))}
+    </div>
+    {tab==='weekly'&&<Weekly scenarios={all} arrivo={arrivo} csm={csm}/>}
+    {tab==='scenarios'&&<div>{all.map(s=><ScCard key={s.id} sc={s} onDel={del} onEdit={edit} arrivo={arrivo} csm={csm}/>)}<Builder onAdd={add} nn={nn} csteps={csteps}/></div>}
+    {tab==='compare'&&<Cmp scenarios={all} arrivo={arrivo} csm={csm}/>}
+    {tab==='settings'&&<Settings settings={settings} setSettings={setSettings} csteps={csteps} setCsteps={setCsteps}/>}
+    <div style={{textAlign:'center',padding:'24px 0 12px',fontSize:11,color:'#94a3b8'}}>Built for Pier 🚀</div>
+  </div>);
+}
+
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
+</body>
+</html>
