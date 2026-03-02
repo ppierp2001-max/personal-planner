@@ -92,8 +92,9 @@ const LS_SETTINGS='morning-planner-settings';
 const LS_CSTEPS='morning-planner-custom-steps';
 const loadCustom=()=>{try{return JSON.parse(localStorage.getItem(LS_KEY))||[]}catch{return[]}};
 const saveCustom=d=>{try{localStorage.setItem(LS_KEY,JSON.stringify(d))}catch{}};
-const DEF_SET={arrivoH:8,arrivoM:50,trCP:'bici',trPU:'piedi',trCU:'bici'};
-const loadSettings=()=>{try{return{...DEF_SET,...JSON.parse(localStorage.getItem(LS_SETTINGS))}}catch{return{...DEF_SET}}};
+const DEF_ROUTES={casaPalestra:{bici:12,piedi:20},palestraUfficio:{bici:10,piedi:10},casaUfficio:{bici:15,piedi:25}};
+const DEF_SET={arrivoH:8,arrivoM:50,routes:{...DEF_ROUTES}};
+const loadSettings=()=>{try{const s=JSON.parse(localStorage.getItem(LS_SETTINGS))||{};return{...DEF_SET,...s,routes:{...DEF_ROUTES,...(s.routes||{})}}}catch{return{...DEF_SET}}};
 const saveSettings=d=>{try{localStorage.setItem(LS_SETTINGS,JSON.stringify(d))}catch{}};
 const loadCSteps=()=>{try{return JSON.parse(localStorage.getItem(LS_CSTEPS))||[]}catch{return[]}};
 const saveCSteps=d=>{try{localStorage.setItem(LS_CSTEPS,JSON.stringify(d))}catch{}};
@@ -111,7 +112,8 @@ const hm=m=>{const h=Math.floor(m/60),mm=m%60;return h===0?`${mm}min`:mm===0?`${
 const calc=(steps,mx,arrivo)=>{const a=arrivo||DEF_ARRIVO;const tot=steps.reduce((s,st)=>s+(mx?st.max:st.min),0),w=a-tot;let c=w;const rows=steps.map(st=>{const d=mx?st.max:st.min,start=c;c+=d;return{...st,start,end:c,dur:d}});return{rows,wake:w,total:tot}};
 
 const RUN={breve:{label:"Corsa breve",short:"40min",min:40,max:40},media:{label:"Corsa media",short:"1h10",min:70,max:70},lunga:{label:"Corsa lunga",short:"1h30-2h",min:90,max:120}};
-const TR={casaPalestra:{bici:{l:"bici",min:12,max:12},piedi:{l:"piedi",min:20,max:20}},palestraUfficio:{piedi:{l:"piedi",min:10,max:10},bici:{l:"bici",min:10,max:10}},casaUfficio:{bici:{l:"bici",min:15,max:15},piedi:{l:"piedi",min:25,max:25}}};
+const buildTR=r=>{const g=r||DEF_ROUTES;return{casaPalestra:{bici:{l:"bici",min:g.casaPalestra.bici,max:g.casaPalestra.bici},piedi:{l:"piedi",min:g.casaPalestra.piedi,max:g.casaPalestra.piedi}},palestraUfficio:{bici:{l:"bici",min:g.palestraUfficio.bici,max:g.palestraUfficio.bici},piedi:{l:"piedi",min:g.palestraUfficio.piedi,max:g.palestraUfficio.piedi}},casaUfficio:{bici:{l:"bici",min:g.casaUfficio.bici,max:g.casaUfficio.bici},piedi:{l:"piedi",min:g.casaUfficio.piedi,max:g.casaUfficio.piedi}}}};
+const TR=buildTR();
 const DTRS={casaPalestra:TR.casaPalestra.bici,palestraUfficio:TR.palestraUfficio.piedi,casaUfficio:TR.casaUfficio.bici};
 
 const SD=[
@@ -161,7 +163,7 @@ function TL({steps,mx,arrivo}){
   </div>);
 }
 
-function ScCard({sc,onDel,onEdit,arrivo,csm,sover,dtrs}){
+function ScCard({sc,onDel,onEdit,arrivo,csm,sover,dtrs,tr:dynTR}){
   const hr=sc.runs&&sc.runs.length>0;
   const [rk,setRk]=useState(hr?sc.runs[0]:null);
   const [mx,setMx]=useState(false);
@@ -169,7 +171,8 @@ function ScCard({sc,onDel,onEdit,arrivo,csm,sover,dtrs}){
   const nPU=sc.sids.some(s=>SM[s]?.nt==='palestraUfficio');
   const nCU=sc.sids.some(s=>SM[s]?.nt==='casaUfficio');
   const [gT,setGT]=useState(dtrs?.casaPalestra?.l||'bici'),[pT,setPT]=useState(dtrs?.palestraUfficio?.l||'piedi'),[cT,setCT]=useState(dtrs?.casaUfficio?.l||'bici');
-  const trs={casaPalestra:TR.casaPalestra[gT],palestraUfficio:TR.palestraUfficio[pT],casaUfficio:TR.casaUfficio[cT]};
+  const _TR=dynTR||TR;
+  const trs={casaPalestra:_TR.casaPalestra[gT],palestraUfficio:_TR.palestraUfficio[pT],casaUfficio:_TR.casaUfficio[cT]};
   const steps=resolve(sc,rk,trs,csm,sover);
   const b=calc(steps,false,arrivo),w=calc(steps,true,arrivo),hasR=b.total!==w.total;
 
@@ -372,14 +375,14 @@ function Settings({settings,setSettings,csteps,setCsteps,sover,setSover,dtrs}){
   const delStep=id=>{setCsteps(p=>p.filter(x=>x.id!==id));if(editId===id)setEditId(null);};
   const editBuiltin=(id,s)=>{setSover(p=>({...p,[id]:{name:s.name,icon:s.icon,min:s.min,max:s.max}}));setEditId(null);};
   const resetBuiltin=id=>{setSover(p=>{const n={...p};delete n[id];return n});};
+  const _TR=dtrs?buildTR(settings.routes):TR;
   const builtinToStep=st=>{
     const ov=sover&&sover[st.id];
-    if(ov)return{id:st.id,name:ov.name,icon:ov.icon||'📌',min:ov.min,max:ov.max};
+    if(ov)return{id:st.id,name:ov.name,icon:ov.icon||'📌',min:ov.min,max:ov.max,isRoute:false};
     const icon=st.name.split(' ')[0],name=st.name.replace(/^[^\s]+\s/,'');
-    const tr=st.nt?(dtrs||DTRS)[st.nt]:null;
-    const info=st.fn(RUN.breve,tr);
-    if(st.nt)return{id:st.id,name:info.name,icon:tr?.l==='bici'?'🚲':'🚶',min:info.min,max:info.max};
-    return{id:st.id,name,icon,min:info.min,max:info.max};
+    if(st.nt){const rt=_TR[st.nt];return{id:st.id,name:name.replace(/ \(.*\)/,''),icon:'🗺️',min:rt.bici.min,max:rt.piedi.min,isRoute:true,bici:rt.bici.min,piedi:rt.piedi.min};}
+    const info=st.fn(RUN.breve,null);
+    return{id:st.id,name,icon,min:info.min,max:info.max,isRoute:false};
   };
   return(<div>
     <div className="card" style={{marginBottom:16}}>
@@ -399,11 +402,22 @@ function Settings({settings,setSettings,csteps,setCsteps,sover,setSover,dtrs}){
       </div>
     </div>
     <div className="card" style={{marginBottom:16}}>
-      <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>🚲 Trasporti predefiniti</h3>
-      {[{key:'trCP',label:'Casa → Palestra',opts:['bici','piedi']},{key:'trPU',label:'Palestra → Ufficio',opts:['bici','piedi']},{key:'trCU',label:'Casa → Ufficio',opts:['bici','piedi']}].map(tr=>(
-        <div key={tr.key} style={{marginBottom:8}}>
-          <label style={{fontWeight:600,fontSize:14,display:'block',marginBottom:4}}>{tr.label}</label>
-          <div className="pills">{tr.opts.map(t=><Pill key={t} on={settings[tr.key]===t} onClick={()=>upd(tr.key,t)}>{t==='bici'?'🚲':'🚶'} {t}</Pill>)}</div>
+      <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>🗺️ Tratte</h3>
+      {[{key:'casaPalestra',label:'Casa → Palestra'},{key:'palestraUfficio',label:'Palestra → Ufficio'},{key:'casaUfficio',label:'Casa → Ufficio'}].map(rt=>(
+        <div key={rt.key} style={{marginBottom:12,padding:'10px 12px',background:'#f8fafc',borderRadius:10}}>
+          <label style={{fontWeight:700,fontSize:14,display:'block',marginBottom:8}}>{rt.label}</label>
+          <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+            {[{mode:'bici',icon:'🚲'},{mode:'piedi',icon:'🚶'}].map(m=>(
+              <div key={m.mode} style={{display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:16}}>{m.icon}</span>
+                <span style={{fontSize:13,fontWeight:600,minWidth:40}}>{m.mode}</span>
+                <input type="number" value={(settings.routes&&settings.routes[rt.key]&&settings.routes[rt.key][m.mode])||DEF_ROUTES[rt.key][m.mode]} min={1} max={120}
+                  onChange={e=>{const v=Math.max(1,+e.target.value);setSettings(p=>({...p,routes:{...p.routes,[rt.key]:{...(p.routes||{})[rt.key],[m.mode]:v}}}))}}
+                  style={{width:60,padding:'5px 8px',borderRadius:8,border:'1px solid #cbd5e1',fontSize:14,textAlign:'center'}}/>
+                <span style={{fontSize:12,color:'#94a3b8'}}>min</span>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
@@ -413,7 +427,7 @@ function Settings({settings,setSettings,csteps,setCsteps,sover,setSover,dtrs}){
         {!adding&&!editId&&<button onClick={()=>{setAdding(true);setEditId(null);}}
           style={{padding:'5px 14px',borderRadius:8,border:'none',background:'#8b5cf6',color:'#fff',fontWeight:600,fontSize:13,cursor:'pointer'}}>+ Nuova fase</button>}
       </div>
-      {SD.map(st=>{const s=builtinToStep(st);const isOv=!!(sover&&sover[st.id]);
+      {SD.filter(st=>!st.nt).map(st=>{const s=builtinToStep(st);const isOv=!!(sover&&sover[st.id]);
         return editId===st.id
           ?<StepForm key={st.id} step={s} onSave={u=>editBuiltin(st.id,u)} onCancel={()=>setEditId(null)}/>
           :<div key={st.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:isOv?'#fef3c7':'#f0f4ff',borderRadius:8,marginBottom:6}}>
@@ -458,7 +472,8 @@ function App(){
   useEffect(()=>saveSettings(settings),[settings]);
   useEffect(()=>saveCSteps(csteps),[csteps]);
   const arrivo=settings.arrivoH*60+settings.arrivoM;
-  const dtrs=useMemo(()=>({casaPalestra:TR.casaPalestra[settings.trCP||'bici'],palestraUfficio:TR.palestraUfficio[settings.trPU||'piedi'],casaUfficio:TR.casaUfficio[settings.trCU||'bici']}),[settings.trCP,settings.trPU,settings.trCU]);
+  const tr=useMemo(()=>buildTR(settings.routes),[settings.routes]);
+  const dtrs=useMemo(()=>({casaPalestra:tr.casaPalestra.bici,palestraUfficio:tr.palestraUfficio.piedi,casaUfficio:tr.casaUfficio.bici}),[tr]);
   const csm=useMemo(()=>Object.fromEntries(csteps.map(s=>[s.id,s])),[csteps]);
   const [bover,setBover]=useState(loadBOver);
   useEffect(()=>saveBOver(bover),[bover]);
@@ -481,7 +496,7 @@ function App(){
       {[{id:'weekly',l:'📅 Settimana'},{id:'scenarios',l:'🔍 Scenari'},{id:'compare',l:'⚡ Confronto'},{id:'settings',l:'⚙️ Impostazioni'}].map(t=>(<button key={t.id} className={`tab-btn${tab===t.id?' on':''}`} onClick={()=>setTab(t.id)}>{t.l}</button>))}
     </div>
     {tab==='weekly'&&<Weekly scenarios={all} arrivo={arrivo} csm={csm} sover={sover} dtrs={dtrs}/>}
-    {tab==='scenarios'&&<div>{all.map(s=><ScCard key={s.id} sc={s} onDel={del} onEdit={edit} arrivo={arrivo} csm={csm} sover={sover} dtrs={dtrs}/>)}<Builder onAdd={add} nn={nn} csteps={csteps} sover={sover}/></div>}
+    {tab==='scenarios'&&<div>{all.map(s=><ScCard key={s.id} sc={s} onDel={del} onEdit={edit} arrivo={arrivo} csm={csm} sover={sover} dtrs={dtrs} tr={tr}/>)}<Builder onAdd={add} nn={nn} csteps={csteps} sover={sover}/></div>}
     {tab==='compare'&&<Cmp scenarios={all} arrivo={arrivo} csm={csm} sover={sover} dtrs={dtrs}/>}
     {tab==='settings'&&<Settings settings={settings} setSettings={setSettings} csteps={csteps} setCsteps={setCsteps} sover={sover} setSover={setSover} dtrs={dtrs}/>}
     <div style={{textAlign:'center',padding:'24px 0 12px',fontSize:11,color:'#94a3b8'}}>Built for Pier 🚀</div>
