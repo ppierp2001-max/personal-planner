@@ -92,7 +92,8 @@ const LS_SETTINGS='morning-planner-settings';
 const LS_CSTEPS='morning-planner-custom-steps';
 const loadCustom=()=>{try{return JSON.parse(localStorage.getItem(LS_KEY))||[]}catch{return[]}};
 const saveCustom=d=>{try{localStorage.setItem(LS_KEY,JSON.stringify(d))}catch{}};
-const loadSettings=()=>{try{return JSON.parse(localStorage.getItem(LS_SETTINGS))||{arrivoH:8,arrivoM:50}}catch{return{arrivoH:8,arrivoM:50}}};
+const DEF_SET={arrivoH:8,arrivoM:50,trCP:'bici',trPU:'piedi',trCU:'bici'};
+const loadSettings=()=>{try{return{...DEF_SET,...JSON.parse(localStorage.getItem(LS_SETTINGS))}}catch{return{...DEF_SET}}};
 const saveSettings=d=>{try{localStorage.setItem(LS_SETTINGS,JSON.stringify(d))}catch{}};
 const loadCSteps=()=>{try{return JSON.parse(localStorage.getItem(LS_CSTEPS))||[]}catch{return[]}};
 const saveCSteps=d=>{try{localStorage.setItem(LS_CSTEPS,JSON.stringify(d))}catch{}};
@@ -160,14 +161,14 @@ function TL({steps,mx,arrivo}){
   </div>);
 }
 
-function ScCard({sc,onDel,onEdit,arrivo,csm,sover}){
+function ScCard({sc,onDel,onEdit,arrivo,csm,sover,dtrs}){
   const hr=sc.runs&&sc.runs.length>0;
   const [rk,setRk]=useState(hr?sc.runs[0]:null);
   const [mx,setMx]=useState(false);
   const nG=sc.sids.some(s=>SM[s]?.nt==='casaPalestra');
   const nPU=sc.sids.some(s=>SM[s]?.nt==='palestraUfficio');
   const nCU=sc.sids.some(s=>SM[s]?.nt==='casaUfficio');
-  const [gT,setGT]=useState('bici'),[pT,setPT]=useState('piedi'),[cT,setCT]=useState('bici');
+  const [gT,setGT]=useState(dtrs?.casaPalestra?.l||'bici'),[pT,setPT]=useState(dtrs?.palestraUfficio?.l||'piedi'),[cT,setCT]=useState(dtrs?.casaUfficio?.l||'bici');
   const trs={casaPalestra:TR.casaPalestra[gT],palestraUfficio:TR.palestraUfficio[pT],casaUfficio:TR.casaUfficio[cT]};
   const steps=resolve(sc,rk,trs,csm,sover);
   const b=calc(steps,false,arrivo),w=calc(steps,true,arrivo),hasR=b.total!==w.total;
@@ -241,11 +242,11 @@ function Builder({onAdd,nn,csteps,sover}){
 const DAYS=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 const DEFW=[{sc:"SC4",run:"breve",work:true},{sc:"SC1",run:"breve",work:true},{sc:"SC2",run:"media",work:true},{sc:"SC3",run:null,work:true},{sc:"SC1",run:"breve",work:true},{sc:null,run:"media",work:false},{sc:null,run:"lunga",work:false}];
 
-function Weekly({scenarios,arrivo,csm,sover}){
+function Weekly({scenarios,arrivo,csm,sover,dtrs}){
   const [week,setWeek]=useState(DEFW);
   const [edit,setEdit]=useState(null);
   const scM=Object.fromEntries(scenarios.map(s=>[s.id,s]));
-  const getW=d=>{if(!d.sc||!d.work)return null;const sc=scM[d.sc];if(!sc)return null;const steps=resolve(sc,d.run,DTRS,csm,sover);return{b:calc(steps,false,arrivo),w:calc(steps,true,arrivo)}};
+  const getW=d=>{if(!d.sc||!d.work)return null;const sc=scM[d.sc];if(!sc)return null;const steps=resolve(sc,d.run,dtrs||DTRS,csm,sover);return{b:calc(steps,false,arrivo),w:calc(steps,true,arrivo)}};
   const upd=(i,f,v)=>setWeek(w=>{const n=[...w];n[i]={...n[i],[f]:v};if(f==='sc'){const sc=scM[v];n[i].run=sc?.runs?.length?sc.runs[0]:null}return n});
 
   return(<div className="card">
@@ -284,13 +285,13 @@ function Weekly({scenarios,arrivo,csm,sover}){
   </div>);
 }
 
-function Cmp({scenarios,arrivo,csm,sover}){
+function Cmp({scenarios,arrivo,csm,sover,dtrs}){
   const [sA,setSA]=useState('SC1'),[sB,setSB]=useState('SC4');
   const [rA,setRA]=useState('breve'),[rB,setRB]=useState('breve');
   const [mA,setMA]=useState(false),[mB,setMB]=useState(false);
   const scM=Object.fromEntries(scenarios.map(s=>[s.id,s]));
   const a=scM[sA],b=scM[sB];
-  const stA=a?resolve(a,rA,DTRS,csm,sover):[],stB=b?resolve(b,rB,DTRS,csm,sover):[];
+  const stA=a?resolve(a,rA,dtrs||DTRS,csm,sover):[],stB=b?resolve(b,rB,dtrs||DTRS,csm,sover):[];
   const bA=calc(stA,false,arrivo),wA=calc(stA,true,arrivo),bB=calc(stB,false,arrivo),wB=calc(stB,true,arrivo);
   const dA=mA?wA:bA,dB=mB?wB:bB;
   const diff=dA.total-dB.total;
@@ -362,7 +363,7 @@ function StepForm({step,onSave,onCancel}){
   </div>);
 }
 
-function Settings({settings,setSettings,csteps,setCsteps,sover,setSover}){
+function Settings({settings,setSettings,csteps,setCsteps,sover,setSover,dtrs}){
   const upd=(k,v)=>setSettings(p=>({...p,[k]:v}));
   const [adding,setAdding]=useState(false);
   const [editId,setEditId]=useState(null);
@@ -375,7 +376,9 @@ function Settings({settings,setSettings,csteps,setCsteps,sover,setSover}){
     const ov=sover&&sover[st.id];
     if(ov)return{id:st.id,name:ov.name,icon:ov.icon||'📌',min:ov.min,max:ov.max};
     const icon=st.name.split(' ')[0],name=st.name.replace(/^[^\s]+\s/,'');
-    const info=st.fn(RUN.breve,st.nt?DTRS[st.nt]:null);
+    const tr=st.nt?(dtrs||DTRS)[st.nt]:null;
+    const info=st.fn(RUN.breve,tr);
+    if(st.nt)return{id:st.id,name:info.name,icon:tr?.l==='bici'?'🚲':'🚶',min:info.min,max:info.max};
     return{id:st.id,name,icon,min:info.min,max:info.max};
   };
   return(<div>
@@ -394,6 +397,15 @@ function Settings({settings,setSettings,csteps,setCsteps,sover,setSover}){
           <span style={{color:'#64748b',fontSize:13,marginLeft:8}}>({fmt(settings.arrivoH*60+settings.arrivoM)})</span>
         </div>
       </div>
+    </div>
+    <div className="card" style={{marginBottom:16}}>
+      <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>🚲 Trasporti predefiniti</h3>
+      {[{key:'trCP',label:'Casa → Palestra',opts:['bici','piedi']},{key:'trPU',label:'Palestra → Ufficio',opts:['bici','piedi']},{key:'trCU',label:'Casa → Ufficio',opts:['bici','piedi']}].map(tr=>(
+        <div key={tr.key} style={{marginBottom:8}}>
+          <label style={{fontWeight:600,fontSize:14,display:'block',marginBottom:4}}>{tr.label}</label>
+          <div className="pills">{tr.opts.map(t=><Pill key={t} on={settings[tr.key]===t} onClick={()=>upd(tr.key,t)}>{t==='bici'?'🚲':'🚶'} {t}</Pill>)}</div>
+        </div>
+      ))}
     </div>
     <div className="card" style={{marginBottom:16}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
@@ -446,6 +458,7 @@ function App(){
   useEffect(()=>saveSettings(settings),[settings]);
   useEffect(()=>saveCSteps(csteps),[csteps]);
   const arrivo=settings.arrivoH*60+settings.arrivoM;
+  const dtrs=useMemo(()=>({casaPalestra:TR.casaPalestra[settings.trCP||'bici'],palestraUfficio:TR.palestraUfficio[settings.trPU||'piedi'],casaUfficio:TR.casaUfficio[settings.trCU||'bici']}),[settings.trCP,settings.trPU,settings.trCU]);
   const csm=useMemo(()=>Object.fromEntries(csteps.map(s=>[s.id,s])),[csteps]);
   const [bover,setBover]=useState(loadBOver);
   useEffect(()=>saveBOver(bover),[bover]);
@@ -467,10 +480,10 @@ function App(){
     <div className="tabs">
       {[{id:'weekly',l:'📅 Settimana'},{id:'scenarios',l:'🔍 Scenari'},{id:'compare',l:'⚡ Confronto'},{id:'settings',l:'⚙️ Impostazioni'}].map(t=>(<button key={t.id} className={`tab-btn${tab===t.id?' on':''}`} onClick={()=>setTab(t.id)}>{t.l}</button>))}
     </div>
-    {tab==='weekly'&&<Weekly scenarios={all} arrivo={arrivo} csm={csm} sover={sover}/>}
-    {tab==='scenarios'&&<div>{all.map(s=><ScCard key={s.id} sc={s} onDel={del} onEdit={edit} arrivo={arrivo} csm={csm} sover={sover}/>)}<Builder onAdd={add} nn={nn} csteps={csteps} sover={sover}/></div>}
-    {tab==='compare'&&<Cmp scenarios={all} arrivo={arrivo} csm={csm} sover={sover}/>}
-    {tab==='settings'&&<Settings settings={settings} setSettings={setSettings} csteps={csteps} setCsteps={setCsteps} sover={sover} setSover={setSover}/>}
+    {tab==='weekly'&&<Weekly scenarios={all} arrivo={arrivo} csm={csm} sover={sover} dtrs={dtrs}/>}
+    {tab==='scenarios'&&<div>{all.map(s=><ScCard key={s.id} sc={s} onDel={del} onEdit={edit} arrivo={arrivo} csm={csm} sover={sover} dtrs={dtrs}/>)}<Builder onAdd={add} nn={nn} csteps={csteps} sover={sover}/></div>}
+    {tab==='compare'&&<Cmp scenarios={all} arrivo={arrivo} csm={csm} sover={sover} dtrs={dtrs}/>}
+    {tab==='settings'&&<Settings settings={settings} setSettings={setSettings} csteps={csteps} setCsteps={setCsteps} sover={sover} setSover={setSover} dtrs={dtrs}/>}
     <div style={{textAlign:'center',padding:'24px 0 12px',fontSize:11,color:'#94a3b8'}}>Built for Pier 🚀</div>
   </div>);
 }
